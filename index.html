@@ -62,8 +62,8 @@ details{margin-top:12px;border-top:1px solid #edf1f6;padding-top:10px}summary{fo
 .add button{border:0;border-radius:12px;background:var(--g);color:#fff;font-size:20px}
 .hint{font-size:12px;color:var(--mut);margin:6px 0 0}
 #prt{display:none}
+.f select{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9f0;border-radius:12px;background:#fff;font-family:inherit;color:var(--tx)}
 @media print{
-@page{size:A4 landscape;margin:7mm}
 body{background:#fff}body>*:not(#prt){display:none!important}
 #prt{display:block;color:#000}
 .sheet{display:grid;grid-template-columns:1fr 1fr;height:195mm;border:1.5px solid #000;break-after:page}
@@ -111,7 +111,7 @@ body{background:#fff}body>*:not(#prt){display:none!important}
       <input id="fTo" list="sites" placeholder="رايح لـ" autocomplete="off">
     </div>
     <div class="f">
-      <label>ملاحظات (اختياري)</label>
+      <label id="lNote">ملاحظات (اختياري)</label>
       <textarea id="fNote" rows="2" placeholder="أي ملاحظة"></textarea>
     </div>
     <datalist id="sites"></datalist>
@@ -135,6 +135,9 @@ body{background:#fff}body>*:not(#prt){display:none!important}
       <div class="f"><label>الوظيفة</label><input id="pJob"></div>
       <div class="f"><label>الإدارة التابع لها (تتكتب في الورقة)</label><input id="pDept"></div>
       <div class="f"><label>أسماء مقر الإدارة في الانتقالات (بينهم فاصلة)</label><input id="pOff"></div>
+      <div class="f"><label>الأماكن الداخلية (غيرها يبقى خارجية)</label><input id="pInn"></div>
+      <div class="two"><div class="f"><label>بداية الشغل</label><input type="time" id="pWs"></div><div class="f"><label>نهاية الشغل</label><input type="time" id="pWe"></div></div>
+      <div class="f"><label>شكل الورقة عند الطباعة</label><select id="pMode"><option value="a4">A4 ورقة واحدة</option><option value="half">A5 في النص الأول من الورقة</option><option value="two">نسختين A5 (نفس المأمورية مرتين)</option><option value="pair">A5 + A5 (كل نص مأمورية مختلفة)</option></select></div>
     </details>
   </div>
 
@@ -144,13 +147,19 @@ body{background:#fff}body>*:not(#prt){display:none!important}
   </div>
 </div>
 
-<div id="prt"></div>
+<style id="pgs">@media print{
+#prt.a4 .sheet{grid-template-columns:1fr;height:277mm}
+#prt.a4 .pn{font-size:15pt;gap:7mm;padding:12mm 14mm}
+#prt.a4 .pn:first-child{border-left:0}
+#prt.a4 .lgo{height:26mm}
+}
+</style><div id="prt"></div>
 <div class="toast" id="toast"></div>
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
-const KEY     = 'change-me-371997';   // نفس كلمة السر اللي في Code.gs
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
+const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
 const $ = id => document.getElementById(id);
@@ -168,6 +177,8 @@ function setType(t){
   type = t;
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
   const tr = t==='انتقال';
+  $('lNote').textContent = tr?'سبب المأمورية':'ملاحظات (اختياري)';
+  $('fNote').placeholder = tr?'مثال: استلام مستخلص / معاينة موقع':'أي ملاحظة';
   $('gSite').classList.toggle('hide', tr);
   $('gFrom').classList.toggle('hide', !tr);
   $('gTo').classList.toggle('hide', !tr);
@@ -228,7 +239,7 @@ $('go').onclick = async () => {
 // ====== المأموريات ======
 const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const SV=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
-const PD={name:'عبدالرحمن ناصر',job:'DC',dept:'الإدارة الهندسية',office:'الإدارة، المكتب'};
+const PD={name:'عبدالرحمن ناصر',job:'DC',dept:'الإدارة الهندسية',office:'الإدارة، المكتب',ws:'09:00',we:'17:00',inn:'الإدارة، صواري، مروج، جكرندا، كفر عبده',mode:'a4'};
 let P=Object.assign({},PD,LS('mis_p',{}));Object.keys(PD).forEach(k=>{if(!String(P[k]||'').trim())P[k]=PD[k]});
 let LEGS=LS('mis_legs',[]), OV=LS('mis_ov',{});
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -256,13 +267,17 @@ function groupM(L){
     if(cur){cur.legs.push(l);l.m=out.length-1;if(isOff(l.to)){cur.back=true;cur=null}}
     else if(!isOff(l.to)){cur={legs:[l],back:false};out.push(cur);l.m=out.length-1}
   });
-  return out.map(m=>{
-    const f=m.legs[0],z=m.legs[m.legs.length-1],pl=[];
-    m.legs.forEach(l=>{if(!isOff(l.to)&&!pl.includes(l.to))pl.push(l.to)});
+  return out.map((m,i)=>{
+    const f=m.legs[0],z=m.legs[m.legs.length-1],ch=[];
+    if(isOff(f.from))ch.push(f.from);
+    m.legs.forEach(l=>ch.push(l.to));
+    const pl=ch.filter((x,j)=>x&&x!==ch[j-1]);
+    const inn=P.inn.split(/[,،]/).map(norm).filter(Boolean);
+    const internal=pl.every(x=>isOff(x)||inn.some(q=>norm(x).includes(q)));
     const nt=[...new Set(m.legs.map(l=>l.note).filter(Boolean))],o=OV[f.id]||{};
     return{id:f.id,d:f.d,back:m.back,legs:m.legs,
-      dest:o.dest!=null?o.dest:pl.join(' ثم '),reason:o.reason!=null?o.reason:nt.join('، '),
-      from:o.from||f.t,to:o.to||z.t,kind:o.kind||'داخلية'};
+      dest:o.dest!=null?o.dest:pl.join(' + '),reason:o.reason!=null?o.reason:nt.join('، '),
+      from:o.from||((i===0&&!isOff(f.from))?P.ws:f.t),to:o.to||(m.back?z.t:P.we),kind:o.kind||(internal?'داخلية':'خارجية')};
   });
 }
 
@@ -302,7 +317,13 @@ function panel(m,right){
 }
 function printM(id){
   const M=groupM(dayLegs(viewDate)).filter(m=>!id||m.id===id);
-  $('prt').innerHTML=M.map(m=>`<div class="sheet">${panel(m,1)}${panel(m,0)}</div>`).join('');
+  const md=P.mode||'a4';
+  $('pgs').textContent=md==='a4'?'@page{size:A4 portrait;margin:8mm}':'@page{size:A4 landscape;margin:7mm}';
+  $('prt').className=md;
+  const pg=[];
+  if(md==='pair'){for(let i=0;i<M.length;i+=2)pg.push(panel(M[i],1)+(M[i+1]?panel(M[i+1],1):'<div class="pn"></div>'))}
+  else M.forEach(m=>pg.push(panel(m,1)+(md==='two'?panel(m,0):md==='half'?'<div class="pn"></div>':'')));
+  $('prt').innerHTML=pg.map(x=>`<div class="sheet">${x}</div>`).join('');
   setTimeout(()=>window.print(),80);
 }
 
@@ -328,7 +349,7 @@ $('aGo').onclick=async()=>{const from=$('aFrom').value.trim(),to=$('aTo').value.
   try{const j=await call({action:'save',type:'انتقال',from,to,d:viewDate,t:$('aT').value||nowT()});toast(j.msg);
     ['aT','aFrom','aTo'].forEach(i=>$(i).value='')}catch(er){toast('⚠ '+er.message,true)}
   loadLegs()};
-[['pName','name'],['pJob','job'],['pDept','dept'],['pOff','office']].forEach(([i,k])=>{$(i).value=P[k];$(i).oninput=()=>{P[k]=$(i).value;SV('mis_p',P);if(k==='office')renderM()}});
+[['pName','name'],['pJob','job'],['pDept','dept'],['pOff','office'],['pInn','inn'],['pWs','ws'],['pWe','we'],['pMode','mode']].forEach(([i,k])=>{$(i).value=P[k];$(i).oninput=()=>{P[k]=$(i).value;SV('mis_p',P);renderM()}});
 renderM();
 loadLegs();
 </script></body></html>
