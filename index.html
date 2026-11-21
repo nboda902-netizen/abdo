@@ -127,7 +127,7 @@ body{background:#fff}body>*:not(#prt){display:none!important}
       <summary>الانتقالات المسجلة + إضافة يدوي</summary>
       <div id="lList"></div>
       <div class="add"><input type="time" id="aT"><input id="aFrom" list="sites" placeholder="من" autocomplete="off"><input id="aTo" list="sites" placeholder="إلى" autocomplete="off"><button id="aGo">+</button></div>
-      <p class="hint">الانتقال الباهت مش محسوب مأمورية (مفيش خروج من الإدارة قبله).</p>
+      <p class="hint">الانتقال الباهت مش محسوب مأمورية (ده انتقال راجع للإدارة من غير مأمورية قبله).</p>
     </details>
     <details>
       <summary>⚙ بياناتي في الورقة</summary>
@@ -137,7 +137,6 @@ body{background:#fff}body>*:not(#prt){display:none!important}
       <div class="f"><label>أسماء مقر الإدارة في الانتقالات (بينهم فاصلة)</label><input id="pOff"></div>
     </details>
   </div>
-  <div id="prt"></div>
 
   <div class="card">
     <p class="sec">📊 ملخص الفترات (26 ← 25)</p>
@@ -145,12 +144,13 @@ body{background:#fff}body>*:not(#prt){display:none!important}
   </div>
 </div>
 
+<div id="prt"></div>
 <div class="toast" id="toast"></div>
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
-const KEY     = 'change-me-371997';   // نفس كلمة السر اللي في Code.gs
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
+const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
 const $ = id => document.getElementById(id);
@@ -254,7 +254,7 @@ function groupM(L){
   const out=[];let cur=null;
   L.forEach(l=>{l.m=-1;
     if(cur){cur.legs.push(l);l.m=out.length-1;if(isOff(l.to)){cur.back=true;cur=null}}
-    else if(isOff(l.from)&&!isOff(l.to)){cur={legs:[l],back:false};out.push(cur);l.m=out.length-1}
+    else if(!isOff(l.to)){cur={legs:[l],back:false};out.push(cur);l.m=out.length-1}
   });
   return out.map(m=>{
     const f=m.legs[0],z=m.legs[m.legs.length-1],pl=[];
@@ -270,13 +270,13 @@ function renderM(){
   $('mDate').value=viewDate;
   const L=dayLegs(viewDate),M=groupM(L);
   $('mList').innerHTML=M.length?M.map((m,i)=>`<div class="ms" data-id="${m.id}">
-    <div class="mh"><b>مأمورية ${i+1}</b><span>${esc(officeName())} ← ${m.legs.map(l=>esc(l.to)).join(' ← ')}${m.back?'':' (لسه مرجعتش)'}</span></div>
+    <div class="mh"><b>مأمورية ${i+1}</b><span>${esc(m.legs[0].from)} ← ${m.legs.map(l=>esc(l.to)).join(' ← ')}${m.back?'':' (لسه مرجعتش)'}</span></div>
     <label>جهة المأمورية</label><input data-k="dest" value="${esc(m.dest)}">
     <label>السبب</label><input data-k="reason" value="${esc(m.reason)}" placeholder="اكتب سبب المأمورية">
     <div class="two"><div><label>من الساعة</label><input type="time" data-k="from" value="${m.from}"></div><div><label>إلى الساعة</label><input type="time" data-k="to" value="${m.to}"></div></div>
     <div class="seg"><button data-kind="داخلية" class="${m.kind==='داخلية'?'on':''}">داخلية</button><button data-kind="خارجية" class="${m.kind==='خارجية'?'on':''}">خارجية</button></div>
     <button class="pr" data-print="1">🖨 طباعة / حفظ PDF</button></div>`).join('')
-    :'<div class="old">مفيش مأموريات في اليوم ده. أول انتقال «من الإدارة» بيفتح مأمورية.</div>';
+    :'<div class="old">مفيش مأموريات في اليوم ده. سجّل انتقال (من ← إلى) من فوق وهتظهر هنا ورقتها مع زر الطباعة.</div>';
   $('mAll').classList.toggle('hide',M.length<2);
   $('lList').innerHTML=L.length?L.map(l=>`<div class="old${l.m<0?' dim':''}"><span>${fT(l.t)} · ${esc(l.from)} ← ${esc(l.to)}</span><button data-del="${l.id}">✕</button></div>`).join(''):'<div class="old">مفيش انتقالات مسجلة</div>';
 }
