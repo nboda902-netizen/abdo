@@ -58,7 +58,7 @@ body{margin:0;font-family:"Segoe UI",Tahoma,"Noto Sans Arabic",sans-serif;backgr
 .pr{width:100%;margin-top:12px;padding:13px;border:0;border-radius:14px;background:var(--blue);color:#fff;font-size:16px;font-weight:700;font-family:inherit}
 details{margin-top:12px;border-top:1px solid #edf1f6;padding-top:10px}summary{font-size:14px;font-weight:700;color:var(--navy);cursor:pointer}
 .old button{border:0;background:none;color:var(--r);font-size:16px}.dim{opacity:.5}
-.add{display:grid;grid-template-columns:96px 1fr 1fr 58px 44px;gap:6px;margin-top:10px}
+.add{display:grid;grid-template-columns:1fr 1fr 58px 44px;gap:6px;margin-top:10px}
 .add button{border:0;border-radius:12px;background:var(--g);color:#fff;font-size:20px}
 .hint{font-size:12px;color:var(--mut);margin:6px 0 0}
 #prt{display:none}
@@ -124,13 +124,19 @@ body{background:#fff}body>*:not(#prt){display:none!important}
   </div>
 
   <div class="card">
-    <p class="sec">📄 المأموريات <input type="date" id="mDate" class="dt"></p>
+    <p class="sec">📄 المأموريات</p>
+    <div class="dbar">
+      <input type="date" id="mDate">
+      <div class="dnav"><button id="dPrev">اليوم السابق</button><button id="dToday">النهاردة</button><button id="dNext">اليوم التالي</button></div>
+      <p class="hint" id="dLbl"></p>
+    </div>
     <div id="mList"></div>
     <button class="pr hide" id="mAll">🖨 طباعة كل مأموريات اليوم</button>
     <details>
       <summary>الانتقالات المسجلة + إضافة يدوي</summary>
       <div id="lList"></div>
-      <div class="add"><input type="time" id="aT"><input id="aFrom" list="sites" placeholder="من" autocomplete="off"><input id="aTo" list="sites" placeholder="إلى" autocomplete="off"><input id="aC" type="number" inputmode="decimal" placeholder="ج"><button id="aGo">+</button></div>
+      <div class="two" style="margin-top:10px"><input type="date" id="aD"><input type="time" id="aT"></div>
+      <div class="add"><input id="aFrom" list="sites" placeholder="من" autocomplete="off"><input id="aTo" list="sites" placeholder="إلى" autocomplete="off"><input id="aC" type="number" inputmode="decimal" placeholder="ج"><button id="aGo">+</button></div>
       <p class="hint" id="lInfo"></p>
       <p class="hint">الانتقال الباهت مش محسوب مأمورية (ده انتقال راجع للإدارة من غير مأمورية قبله).</p>
     </details>
@@ -164,12 +170,17 @@ body{background:#fff}body>*:not(#prt){display:none!important}
 #prt.a4 .pn:first-child{border-left:0}
 #prt.a4 .lgo{height:26mm}
 }
+#mDate{width:100%;padding:12px;font-size:16px;border:2px solid #e3e9f0;border-radius:12px;background:#fff;font-family:inherit;color:var(--tx)}
+.dnav{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.dnav button{padding:10px 4px;border:2px solid #e3e9f0;border-radius:12px;background:#f7f9fc;font-family:inherit;font-size:13px;font-weight:700;color:var(--navy)}
+.dbar{margin-bottom:12px}.dbar .hint{text-align:center;font-weight:700;color:var(--navy);font-size:14px}
+details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9f0;border-radius:12px;background:#fff;font-family:inherit;color:var(--tx)}
 </style><div id="prt"></div>
 <div class="toast" id="toast"></div>
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
 const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
@@ -304,7 +315,7 @@ function groupM(L){
 }
 
 function renderM(){
-  $('mDate').value=viewDate;
+  $('mDate').value=viewDate;$('aD').value=viewDate;$('dLbl').textContent=dayN(viewDate)+'  '+fD(viewDate);
   const L=dayLegs(viewDate),M=groupM(L);
   $('mList').innerHTML=M.length?M.map((m,i)=>`<div class="ms" data-id="${m.id}">
     <div class="mh"><b>مأمورية ${i+1}</b><span>${esc(m.legs[0].from)} ← ${m.legs.map(l=>esc(l.to)).join(' ← ')}${m.back&&!isOff(m.legs[m.legs.length-1].to)?' ← '+esc(officeName()):''}${m.back?'':' (لسه مرجعتش)'}</span></div>
@@ -354,6 +365,8 @@ $('mList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
   if(b.dataset.kind){(OV[id]=OV[id]||{}).kind=b.dataset.kind;SV('mis_ov',OV);renderM()}
   else if(b.dataset.print)printM(id)});
 $('mAll').onclick=()=>printM();
+const shift=n=>{const d=new Date(viewDate+'T12:00');d.setDate(d.getDate()+n);viewDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');renderM()};
+$('dPrev').onclick=()=>shift(-1);$('dNext').onclick=()=>shift(1);$('dToday').onclick=()=>{viewDate=todayStr();renderM()};
 $('mDate').onchange=e=>{viewDate=e.target.value||todayStr();renderM()};
 async function loadLegs(){
   try{const r=await call({action:'legs'});
@@ -370,7 +383,7 @@ $('lList').addEventListener('click',async e=>{const id=e.target.dataset.del;if(!
   try{await call({action:'del',row:l.row,from:l.from,to:l.to});toast('اتمسح ✔')}catch(er){toast('⚠ '+er.message,true)}
   loadLegs()});
 $('aGo').onclick=async()=>{const from=$('aFrom').value.trim(),to=$('aTo').value.trim();if(!from||!to){toast('اكتب من وإلى',true);return}
-  try{const j=await call({action:'save',type:'انتقال',from,to,cost:$('aC').value,d:viewDate,t:$('aT').value||nowT()});toast(j.msg);
+  try{const j=await call({action:'save',type:'انتقال',from,to,cost:$('aC').value,d:$('aD').value||viewDate,t:$('aT').value||nowT()});toast(j.msg);viewDate=$('aD').value||viewDate;
     ['aT','aFrom','aTo','aC'].forEach(i=>$(i).value='')}catch(er){toast('⚠ '+er.message,true)}
   loadLegs()};
 [['pName','name'],['pJob','job'],['pDept','dept'],['pOff','office'],['pInn','inn'],['pWs','ws'],['pWe','we'],['pMode','mode']].forEach(([i,k])=>{$(i).value=P[k];$(i).oninput=()=>{P[k]=$(i).value;SV('mis_p',P);renderM()}});
