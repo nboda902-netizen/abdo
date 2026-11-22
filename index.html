@@ -131,6 +131,7 @@ body{background:#fff}body>*:not(#prt){display:none!important}
       <summary>الانتقالات المسجلة + إضافة يدوي</summary>
       <div id="lList"></div>
       <div class="add"><input type="time" id="aT"><input id="aFrom" list="sites" placeholder="من" autocomplete="off"><input id="aTo" list="sites" placeholder="إلى" autocomplete="off"><input id="aC" type="number" inputmode="decimal" placeholder="ج"><button id="aGo">+</button></div>
+      <p class="hint" id="lInfo"></p>
       <p class="hint">الانتقال الباهت مش محسوب مأمورية (ده انتقال راجع للإدارة من غير مأمورية قبله).</p>
     </details>
     <details>
@@ -168,7 +169,7 @@ body{background:#fff}body>*:not(#prt){display:none!important}
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
 const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
@@ -359,7 +360,8 @@ async function loadLegs(){
     ATT=r.att||[];
     LEGS=r.legs.map(x=>({id:x.d+' '+x.t+' '+x.from+'>'+x.to,row:x.row,d:x.d,t:x.t,from:x.from,to:x.to,note:x.note,cost:x.cost}));
     saveLegs();renderM();
-  }catch(e){toast('⚠ '+e.message,true)}
+    $('lInfo').textContent='اتحمّل '+LEGS.length+' انتقال من الشيت (آخر 70 يوم)';
+  }catch(e){toast('⚠ '+e.message,true);$('lInfo').textContent='⚠ فشل التحميل من الشيت: '+e.message}
 }
 $('lList').addEventListener('click',async e=>{const id=e.target.dataset.del;if(!id)return;
   const l=LEGS.find(x=>x.id===id);if(!l)return;
