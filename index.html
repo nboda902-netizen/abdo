@@ -180,7 +180,7 @@ details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
 const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
@@ -293,7 +293,7 @@ function groupM(L){
     const o=OV[m.id]||{};
     return{id:m.id,d:m.d,back,m,
       dest:o.dest!=null?o.dest:pl.join(' + '),reason:o.reason!=null?o.reason:m.note,
-      from:o.from||((i===0&&home)?P.ws:m.t),to:o.to||(back?(m.end||m.t):P.we),kind:o.kind||(internal?'داخلية':'خارجية')};
+      from:o.from||((i===0&&home&&m.t<P.ws)?P.ws:m.t),to:o.to||m.end||(back?m.t:P.we),kind:o.kind||(internal?'داخلية':'خارجية')};
   });
 }
 
