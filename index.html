@@ -132,6 +132,7 @@ body{background:#fff}body>*:not(#prt){display:none!important}
     </div>
     <div id="mList"></div>
     <button class="pr hide" id="mAll">🖨 طباعة كل مأموريات اليوم</button>
+    <button class="pr" id="mEvery" style="background:var(--navy)">🖨 طباعة كل المأموريات في السجل</button>
     <details>
       <summary>الانتقالات المسجلة + إضافة يدوي</summary>
       <div id="lList"></div>
@@ -180,7 +181,7 @@ details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
 const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
@@ -332,9 +333,10 @@ function panel(m,right){
   <div class="r"><b>- مدير إدارة الموارد البشرية:</b>${v('')}<b>التاريخ :</b>${v('','s')}</div>
   <div class="r"><b>- المدير العام:</b>${v('')}<b>التاريخ :</b>${v('','s')}</div></div></div>`;
 }
-function printM(id){
-  const M=groupM(dayLegs(viewDate)).filter(m=>!id||m.id===id);
-  const md=P.mode||'a4';
+const allM=()=>[...new Set(LEGS.map(l=>l.d))].sort().flatMap(d=>groupM(dayLegs(d)));
+function printM(id,all){
+  const M=all?allM():groupM(dayLegs(viewDate)).filter(m=>!id||m.id===id);
+  const md=all?'pair':(P.mode||'a4');
   $('pgs').textContent=md==='a4'?'@page{size:A4 portrait;margin:8mm}':'@page{size:A4 landscape;margin:7mm}';
   $('prt').className=md;
   const pg=[];
@@ -349,6 +351,7 @@ $('mList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b
   if(b.dataset.kind){(OV[id]=OV[id]||{}).kind=b.dataset.kind;SV('mis_ov',OV);renderM()}
   else if(b.dataset.print)printM(id)});
 $('mAll').onclick=()=>printM();
+$('mEvery').onclick=()=>{if(!allM().length){toast('مفيش مأموريات في السجل',true);return}printM(null,true)};
 const shift=n=>{const d=new Date(viewDate+'T12:00');d.setDate(d.getDate()+n);viewDate=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');renderM()};
 $('dPrev').onclick=()=>shift(-1);$('dNext').onclick=()=>shift(1);$('dToday').onclick=()=>{viewDate=todayStr();renderM()};
 $('mDate').onchange=e=>{viewDate=e.target.value||todayStr();renderM()};
