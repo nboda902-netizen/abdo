@@ -180,7 +180,7 @@ details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
 const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
@@ -286,9 +286,10 @@ function prefillFrom(){if(type!=='انتقال'||$('fFrom').value)return;const L
 function groupM(L){
   const inn=P.inn.split(/[,،]/).map(norm).filter(Boolean);
   return L.map((m,i)=>{
-    const home=!isOff(m.stops[0]),st=m.stops.slice(1),back=!m.open;
-    const ch=(home?[]:[m.stops[0]]).concat(st);
-    const pl=ch.filter((x,j)=>x&&x!==ch[j-1]);
+    const sp=m.stops,back=!m.open,home=!isOff(sp[0])&&sp.length>1;
+    const org=sp.length>1&&(isOff(sp[0])||/بيت|منزل/.test(norm(sp[0])));
+    const ds=org?sp.slice(1):sp;               // الإدارة/البيت في الأول بداية مش جهة
+    const pl=ds.filter((x,j)=>x&&x!==ds[j-1]);
     const internal=pl.every(x=>isOff(x)||inn.some(q=>norm(x).includes(q)));
     const o=OV[m.id]||{};
     return{id:m.id,d:m.d,back,m,
