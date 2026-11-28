@@ -210,7 +210,7 @@ details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9
     <div id="rqLeave" class="rqt">
       <p class="hint" id="lvBal"></p>
       <div class="two"><div><label>من تاريخ</label><input type="date" id="lvF"></div><div><label>إلى تاريخ</label><input type="date" id="lvT"></div></div>
-      <div class="seg" style="grid-template-columns:1fr 1fr 1fr"><button id="lvK1" class="on">اعتيادية</button><button id="lvK2">عارضة</button><button id="lvK3">نصف يوم</button></div>
+      <div class="seg"><button id="lvK1" class="on">اعتيادية</button><button id="lvK2">عارضة</button><button id="lvK3">نصف يوم</button><button id="lvK4">بدل إجازة رسمية</button></div>
       <label>الموظف البديل (السيد /)</label><input id="lvAlt" placeholder="اسم البديل">
       <p class="hint" id="lvInfo"></p>
       <button class="pr" id="lvSave">حفظ الإجازة</button>
@@ -218,6 +218,13 @@ details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9
     </div>
     <p class="sec" style="margin-top:18px">الإجازات المسجلة</p>
     <div id="rqListL"></div>
+    <details style="margin-top:14px">
+      <summary>📅 الإجازات الرسمية (الأيام دي مش بتتخصم من رصيدك)</summary>
+      <div id="holList"></div>
+      <div class="two" style="margin-top:10px"><input type="date" id="holD"><input id="holN" placeholder="اسم المناسبة"></div>
+      <button class="pr" id="holAdd">إضافة إجازة رسمية</button>
+      <p class="hint">لما الحكومة تعلن إجازة رسمية، ضيف تاريخها هنا.</p>
+    </details>
   </div>
 
   <div class="card" id="vSum">
@@ -244,8 +251,8 @@ details .two input{width:100%;padding:11px;font-size:15px;border:2px solid #e3e9
 
 <script>
 // ====== عدّل السطرين دول بس ======
-const URL_APP = 'https://script.google.com/macros/s/AKfycbzNR2MtoJUSnaVtGwsmFZ2wSvvQLQRKphfue-qwxtugw6YSh6dkfaznUph6FOb2Oz9E/exec';
-const KEY     = '#01211024123#';   // نفس كلمة السر اللي في Code.gs
+const URL_APP = 'https://script.google.com/macros/s/AKfycbx4CKx8SCma1hFZWVaBbji2KzYB2XbHLkCgQgarsyXCsfwH_0_TA8kV_yTwsVt0rQ9p/exec';
+const KEY     = 'change-me-123';   // نفس كلمة السر اللي في Code.gs
 // =================================
 
 const $ = id => document.getElementById(id);
@@ -446,7 +453,7 @@ $('rpGo').onclick=async()=>{const b=$('rpGo');b.disabled=true;b.textContent='ج�
   catch(e){toast('⚠ '+e.message,true)}
   b.disabled=false;b.textContent='إنشاء / تحديث التقرير في الشيت'};
 // ====== الأذونات والإجازات ======
-let HOL=new Set(),BAL={},REQS=[],rqPart='أول اليوم',rqCls='اعتيادي',lvKind='اعتيادية';
+let HOLS=[],HOL=new Set(),BAL={},REQS=[],rqPart='أول اليوم',rqCls='اعتيادي',lvKind='اعتيادية';
 const addM=(t,m)=>{const x=(+t.slice(0,2)*60+ +t.slice(3)+m+1440)%1440;return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')};
 const durT=(a,b)=>{if(!a||!b)return'';const m=(+b.slice(0,2)*60+ +b.slice(3))-(+a.slice(0,2)*60+ +a.slice(3));if(m<=0)return'';const h=Math.floor(m/60),r=m%60;
   const H=h===1?'ساعة':h===2?'ساعتين':h+' ساعات';
@@ -456,12 +463,14 @@ const lvBy=(a,b)=>{const o={};for(const d=new Date(a+'T12:00'),e=new Date(b+'T12
 const lvDays=(a,b)=>Object.values(lvBy(a,b)).reduce((x,y)=>x+y,0);
 function lvBalUpd(){
   const y=new Date().getFullYear();
-  $('lvBal').innerHTML=[y,y+1].map(k=>BAL[k]?'<b>رصيد '+k+':</b> '+BAL[k].allow+' · اتاخد '+BAL[k].used+' (اعتيادية '+BAL[k].reg+'، عارضة '+BAL[k].cas+') · <b>متبقي '+BAL[k].left+'</b>':'').filter(Boolean).join('<br>');
+  $('lvBal').innerHTML=[y,y+1].map(k=>BAL[k]?'<b>رصيد '+k+':</b> '+BAL[k].allow+' · اتاخد '+BAL[k].used+' (اعتيادية '+BAL[k].reg+'، عارضة '+BAL[k].cas+') · <b>متبقي '+BAL[k].left+'</b>'+(BAL[k].sub?' · من غير خصم '+BAL[k].sub:''):'').filter(Boolean).join('<br>');
 }
 function lvInfoUpd(){
   const f=$('lvF').value,t=lvKind.indexOf('نصف')>=0?f:$('lvT').value;
   if(!f||!t||t<f){$('lvInfo').textContent='';return}
-  const by=lvBy(f,t);let x='هتتخصم '+lvDays(f,t)+' يوم (من غير الجمعة والإجازات الرسمية)';
+  const by=lvBy(f,t);
+  if(lvKind.indexOf('بدل')>=0){$('lvInfo').textContent=lvDays(f,t)+' يوم بدل إجازة رسمية: مش هتتخصم من الرصيد';return}
+  let x='هتتخصم '+lvDays(f,t)+' يوم (من غير الجمعة والإجازات الرسمية)';
   Object.keys(by).forEach(k=>{const b=BAL[k];if(b)x+=' · '+k+': المتبقي بعدها '+(b.left-by[k])+' من '+b.allow});
   $('lvInfo').textContent=x;
 }
@@ -476,9 +485,10 @@ $('rqPt1').onclick=()=>{rqPart='أول اليوم';seg(['rqPt1','rqPt2'],0);rqDe
 $('rqPt2').onclick=()=>{rqPart='آخر اليوم';seg(['rqPt1','rqPt2'],1);rqDefaults()};
 $('rqC1').onclick=()=>{rqCls='اعتيادي';seg(['rqC1','rqC2'],0)};
 $('rqC2').onclick=()=>{rqCls='عارض';seg(['rqC1','rqC2'],1)};
-$('lvK1').onclick=()=>{lvKind='اعتيادية';seg(['lvK1','lvK2','lvK3'],0);lvInfoUpd()};
-$('lvK2').onclick=()=>{lvKind='عارضة';seg(['lvK1','lvK2','lvK3'],1);lvInfoUpd()};
-$('lvK3').onclick=()=>{lvKind='نصف يوم إعتيادي';seg(['lvK1','lvK2','lvK3'],2);lvInfoUpd()};
+$('lvK1').onclick=()=>{lvKind='اعتيادية';seg(['lvK1','lvK2','lvK3','lvK4'],0);lvInfoUpd()};
+$('lvK2').onclick=()=>{lvKind='عارضة';seg(['lvK1','lvK2','lvK3','lvK4'],1);lvInfoUpd()};
+$('lvK3').onclick=()=>{lvKind='نصف يوم إعتيادي';seg(['lvK1','lvK2','lvK3','lvK4'],2);lvInfoUpd()};
+$('lvK4').onclick=()=>{lvKind='بدل إجازة رسمية';seg(['lvK1','lvK2','lvK3','lvK4'],3);lvInfoUpd()};
 ['rqD','rqF','rqTo','lvF','lvT'].forEach(i=>$(i).oninput=rqInfo);
 $('rqD').value=todayStr();rqDefaults();
 
@@ -497,7 +507,7 @@ $('lvSave').onclick=async()=>{
   loadReqs()};
 
 async function loadReqs(){
-  try{const r=await call({action:'reqs'});REQS=r.reqs||[];HOL=new Set(r.hol||[]);BAL=r.bal||{};renderReqs();rqInfo();lvBalUpd()}
+  try{const r=await call({action:'reqs'});REQS=r.reqs||[];HOL=new Set(r.hol||[]);HOLS=r.hols||[];BAL=r.bal||{};renderHols();renderReqs();rqInfo();lvBalUpd()}
   catch(e){['rqListP','rqListL'].forEach(i=>$(i).innerHTML='<div class="old">⚠ '+esc(e.message)+'</div>')}
 }
 const rqRow=r=>`<div class="old"><span>${r.rtype==='إذن'?'⏱ إذن '+esc(r.part)+' · '+fD(r.d)+' · '+fT(r.from)+' - '+fT(r.to):'🏖 إجازة '+esc(r.cls)+' · '+fD(r.from)+' ← '+fD(r.to)} · ${esc(r.dur)}</span><span><button class="pb" data-pr="${r.row}">🖨</button><button data-rd="${r.row}">✕</button></span></div>`;
@@ -546,7 +556,7 @@ function leaveSheet(r){
   <div class="r"><b>• التاريخ من يوم :</b>${V(dayN(r.from))}<b>الموافق :</b>${V(fD(r.from))}</div>
   <div class="r"><b>• إلى يوم :</b>${V(dayN(r.to))}<b>الموافق :</b>${V(fD(r.to))}</div>
   <div class="pp"><b>• علماً بأن السيد /</b> ${V(r.alt)} <b>سوف ينوب عني أثناء الإجازة وتم التنسيق معه وإعطائه بيان مكتوب بتفاصيل المهام التي سيتولاها.</b></div>
-  <div class="pp"><b>نوع الإجازة المطلوبة :</b> <span class="bx">${k==='اعتيادية'?'✔':''}</span> إعتيادية <span class="bx">${k==='عارضة'?'✔':''}</span> عارضة <span class="bx">${k.indexOf('نصف')>=0?'✔':''}</span> نصف يوم إعتيادي</div>
+  <div class="pp"><b>نوع الإجازة المطلوبة :</b> <span class="bx">${k==='اعتيادية'?'✔':''}</span> إعتيادية <span class="bx">${k==='عارضة'?'✔':''}</span> عارضة <span class="bx">${k.indexOf('نصف')>=0?'✔':''}</span> نصف يوم إعتيادي${k.indexOf('بدل')>=0?' — بدل إجازة رسمية':''}</div>
   <div class="r sg"><b>• توقيع الموظف القائم بالإجازة :</b>${V('')}</div>
   <div class="r"><b>• توقيع الموظف البديل :</b>${V('')}</div>
   <hr class="dsh">
@@ -564,6 +574,14 @@ $('rqPrintP').onclick=()=>{const k=perKey($('rqD').value||todayStr());
   if(!L.length){toast('مفيش أذونات في الفترة دي',true);return}printReqs(L)};
 $('rqPrintL').onclick=()=>{const L=REQS.filter(r=>r.rtype==='إجازة').sort((a,b)=>a.d.localeCompare(b.d)||a.row-b.row);
   if(!L.length){toast('مفيش إجازات مسجلة',true);return}printReqs(L)};
+function renderHols(){$('holList').innerHTML=HOLS.map(x=>`<div class="old"><span>${fD(x.d)} · ${esc(x.name)}</span><button data-hd="${x.row}">✕</button></div>`).join('')||'<div class="old">لسه مفيش</div>'}
+$('holAdd').onclick=async()=>{const d=$('holD').value;if(!d){toast('اكتب التاريخ',true);return}
+  try{const j=await call({action:'holadd',d,name:$('holN').value.trim()});toast(j.msg);$('holN').value=''}catch(e){toast('⚠ '+e.message,true)}
+  loadReqs()};
+$('holList').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const x=HOLS.find(h=>String(h.row)===b.dataset.hd);if(!x)return;
+  if(!confirm('مسح الإجازة الرسمية دي؟'))return;
+  try{await call({action:'holdel',row:x.row,d:x.d});toast('اتمسح ✔')}catch(er){toast('⚠ '+er.message,true)}
+  loadReqs()});
 loadReqs();
 renderM();
 window.__ready=true;
